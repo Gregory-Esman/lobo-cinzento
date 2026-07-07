@@ -120,8 +120,8 @@
         esc(next.time) + (next.date !== todayISO() ? " · " + esc(next.date) : "") +
         "<br><small>" + esc(next.bell.purpose) + "</small></span></a></section>";
     }
-    h += '<footer class="foot">O sino tira as desculpas; o trabalho não pode fazer por ti.<br>' +
-      "<small>The bell removes your excuses; the work it cannot do for you.</small></footer>";
+    h += '<footer class="foot">O sino tira as desculpas; o trabalho é teu.<br>' +
+      "<small>The bell removes the excuses; the work is yours.</small></footer>";
     render(el(h));
   }
 
