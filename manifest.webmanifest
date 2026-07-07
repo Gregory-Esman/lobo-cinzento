@@ -1,0 +1,14 @@
+{
+  "name": "Lobo Cinzento — European Portuguese",
+  "short_name": "Lobo",
+  "description": "European Portuguese, delivered by the bell. Four sessions a day arrive on your phone; the work is yours.",
+  "start_url": "./#/",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#17181b",
+  "theme_color": "#17181b",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
