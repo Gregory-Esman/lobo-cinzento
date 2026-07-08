@@ -132,6 +132,50 @@ small { color: var(--ink-dim); }
   color-scheme: dark;
 }
 
+/* dialogue lines */
+.dialogue { display: grid; gap: .5rem; margin: 1rem 0; }
+.dline {
+  font-family: var(--serif); text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 4.2rem 1fr; column-gap: .7rem; row-gap: .15rem;
+  background: var(--paper-2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: .6rem; padding: .6rem .8rem;
+}
+.dline:active { border-color: var(--azulejo); }
+.dline .dsp { grid-row: 1 / span 2; color: var(--ink-dim); font-size: .82rem; align-self: start; padding-top: .15rem; }
+.dline .dpt { font-size: 1.05rem; font-weight: 600; }
+.dline .den { color: var(--ink-dim); font-size: .88rem; }
+
+/* home shortcut belts */
+.beltrow { display: flex; flex-wrap: wrap; gap: .55rem; }
+.belt {
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: .6rem;
+  padding: .55rem .85rem; color: var(--ink); font-size: .95rem;
+}
+.belt:hover { text-decoration: none; border-color: var(--azulejo-deep); }
+
+/* conversa chat */
+.chatlog {
+  display: flex; flex-direction: column; gap: .55rem;
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: .75rem;
+  padding: .8rem; min-height: 14rem; max-height: 55vh; overflow-y: auto; margin: 1rem 0;
+}
+.bub { max-width: 85%; padding: .55rem .8rem; border-radius: .7rem; line-height: 1.5; }
+.bub.wolf { background: var(--azulejo-deep); align-self: flex-start; }
+.bub.me { background: #33363c; align-self: flex-end; }
+.bub.sys { color: var(--ink-dim); font-size: .85rem; align-self: center; font-style: italic; background: none; }
+.chatrow { display: flex; gap: .5rem; }
+.chatrow input {
+  flex: 1; font-family: var(--serif); font-size: 1.05rem; color: var(--ink);
+  background: var(--paper-2); border: 1px solid var(--line); border-radius: .6rem; padding: .6rem .8rem;
+}
+.chatrow .btn { margin: 0; }
+
+/* pré-oficial badge */
+.preof {
+  font-size: .65em; letter-spacing: .1em; vertical-align: middle;
+  border: 1px solid var(--bad); color: var(--bad); border-radius: .4rem; padding: .1rem .45rem;
+}
+
 /* footer */
 .foot { text-align: center; color: var(--ink-dim); font-style: italic; padding: 2.5rem 0 1rem; font-size: .95rem; }
 

@@ -1,11 +1,14 @@
 /* Lobo Cinzento service worker — cache-first app shell so answered bells work offline. */
-var CACHE = "lobo-v1";
+var CACHE = "lobo-v2";
 var SHELL = [
   "./",
   "./index.html",
   "./app.css",
   "./app.js",
   "./content/lesson0.js",
+  "./content/units-1-7.js",
+  "./content/units-8-14.js",
+  "./content/cidadania.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
