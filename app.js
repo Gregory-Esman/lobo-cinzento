@@ -78,6 +78,31 @@
       ITEMS[d.id] = { id: d.id, day: u.day, q: d.q, options: d.options, answer: d.answer, explain: d.explain };
     });
   });
+  // Civics readings: drills join the SRS universe flagged civic, unlocking at day week*7.
+  // Sessions cap civic items at CIVIC_CAP so citizenship prep can never crowd out language.
+  var CIVIC_CAP = 2;
+  (window.CIVICS_READINGS || []).forEach(function (r) {
+    r.drills.forEach(function (d) {
+      ITEMS[d.id] = { id: d.id, day: r.week * 7, civic: true, q: d.q, options: d.options, answer: d.answer, explain: d.explain };
+    });
+  });
+  function readingsUnlocked(n) {
+    return (window.CIVICS_READINGS || []).filter(function (r) { return r.week * 7 <= n; });
+  }
+  function civicsPick(n, exclude) {
+    var today = todayISO();
+    var unlockedIds = [];
+    readingsUnlocked(n).forEach(function (r) {
+      r.drills.forEach(function (d) { unlockedIds.push(d.id); });
+    });
+    var due = unlockedIds.filter(function (id) {
+      return exclude.indexOf(id) === -1 && state.srs[id] && state.srs[id].due <= today;
+    });
+    var fresh = unlockedIds.filter(function (id) {
+      return exclude.indexOf(id) === -1 && !state.srs[id];
+    });
+    return shuffle(due).concat(shuffle(fresh)).slice(0, CIVIC_CAP);
+  }
 
   /* ---------- speech (interim voice — real EP audio plugs in via AUDIO_MANIFEST) ---------- */
   var ptVoice = null;
@@ -348,8 +373,51 @@
       h += '<div class="decode"><strong>Decoded — ' + esc(d.title) + ":</strong> " + d.html + "</div>";
     });
 
+    // Weekly civics reading, surfaced on its unlock week (secondary goal riding the primary)
+    var unlocked = readingsUnlocked(u.day);
+    var thisWeek = unlocked.length ? unlocked[unlocked.length - 1] : null;
+    if (thisWeek && u.day >= thisWeek.week * 7) {
+      h += '<h2>A leitura cívica</h2><a class="step" href="#/leitura/' + thisWeek.id + '"><span class="n">🇵🇹</span><div><strong>' +
+        esc(thisWeek.title) + "</strong><br><small>" + esc(thisWeek.titleEn) + " — this week's citizenship reading, in Portuguese you can handle.</small></div></a>";
+    }
+
     h += '<p><a class="btn" href="#/praticar/' + u.day + '">Drill this day now →</a></p></section>';
     return h;
+  }
+
+  function viewLeitura(hash) {
+    var m = hash.match(/^#\/leitura\/(\w+)/);
+    var r = m && (window.CIVICS_READINGS || []).find(function (x) { return x.id === m[1]; });
+    if (!r) { location.hash = "#/cidadania"; return; }
+    var h = crumb("Leitura cívica " + r.week);
+    h += '<section class="lesson"><h1>🇵🇹 ' + esc(r.title) + '</h1><p class="tag">' + esc(r.titleEn) +
+      ' · Semana ' + r.week + ' <span class="preof">PRÉ-OFICIAL</span></p>' +
+      "<div class='dialogue'>" +
+      r.paras.map(function (p) {
+        return '<button class="dline" data-say="' + esc(p.pt) + '">' +
+          '<span class="dsp">§</span><span class="dpt">' + esc(p.pt) + '</span>' +
+          '<span class="den">' + esc(p.en) + "</span></button>";
+      }).join("") + "</div>" +
+      '<p class="decode"><strong>How to work it:</strong> same as a morning dialogue — listen, understand, shadow. The facts are the citizenship test; the sentences are your Portuguese. Both at once, by design.</p>' +
+      '<p><a class="btn" href="#/praticar-leitura/' + r.id + '">Drill this reading →</a></p></section>';
+    var frag = el(h);
+    hydrateSpeech(frag);
+    render(frag);
+  }
+
+  function viewPraticarLeitura(hash) {
+    var m = hash.match(/^#\/praticar-leitura\/(\w+)/);
+    var r = m && (window.CIVICS_READINGS || []).find(function (x) { return x.id === m[1]; });
+    if (!r) { location.hash = "#/cidadania"; return; }
+    runQuiz({
+      head: crumb(r.title + " · drills"),
+      title: "🇵🇹 " + r.title,
+      intro: "The reading's drills — in Portuguese, like the real test will be. These join your Treino rotation (never more than 2 per session).",
+      questions: shuffle(r.drills),
+      srs: true,
+      onPass: function () { location.hash = "#/leitura/" + r.id; },
+      passNote: "Done — back to the reading."
+    });
   }
 
   function viewUnidade(hash) {
@@ -404,31 +472,40 @@
 
   function buildTreino() {
     var today = todayISO();
-    var due = Object.keys(state.srs).filter(function (id) { return state.srs[id].due <= today && ITEMS[id]; });
+    var nReal = currentDay();
+    var n = Math.min(nReal, MAX_DAY);
+    // language items only — civics enters via civicsPick, capped
+    var due = Object.keys(state.srs).filter(function (id) {
+      return state.srs[id].due <= today && ITEMS[id] && !ITEMS[id].civic;
+    });
     var weakFirst = due.sort(function (a, b) { return (state.weak[b] || 0) - (state.weak[a] || 0); }).slice(0, 12);
-    var n = Math.min(currentDay(), MAX_DAY);
     var u = unitForDay(n);
     var fresh = u ? u.drills.map(function (d) { return d.id; }).filter(function (id) { return !state.srs[id]; }).slice(0, 6) : [];
     var pool = weakFirst.concat(fresh);
     if (pool.length < 8) {
       var extra = shuffle(Object.keys(ITEMS).filter(function (id) {
-        return pool.indexOf(id) === -1 && ITEMS[id].day <= n;
+        return pool.indexOf(id) === -1 && !ITEMS[id].civic && ITEMS[id].day <= n;
       })).slice(0, 8 - pool.length);
       pool = pool.concat(extra);
     }
-    return shuffle(pool).slice(0, 14).map(function (id) { return ITEMS[id]; });
+    pool = shuffle(pool).slice(0, 12).concat(civicsPick(nReal, pool));
+    return shuffle(pool).map(function (id) { return ITEMS[id]; });
   }
 
   function buildProva() {
-    var n = Math.min(currentDay(), MAX_DAY);
+    var nReal = currentDay();
+    var n = Math.min(nReal, MAX_DAY);
     var u = unitForDay(n);
     var ids = [];
     if (u) ids = shuffle(u.drills.map(function (d) { return d.id; })).slice(0, 5);
-    var weak = shuffle(Object.keys(state.weak).filter(function (id) { return ids.indexOf(id) === -1 && ITEMS[id]; })).slice(0, 3);
+    var weak = shuffle(Object.keys(state.weak).filter(function (id) {
+      return ids.indexOf(id) === -1 && ITEMS[id] && !ITEMS[id].civic;
+    })).slice(0, 3);
     var past = shuffle(Object.keys(ITEMS).filter(function (id) {
-      return ITEMS[id].day < n && ids.indexOf(id) === -1 && weak.indexOf(id) === -1;
+      return ITEMS[id].day < n && !ITEMS[id].civic && ids.indexOf(id) === -1 && weak.indexOf(id) === -1;
     })).slice(0, 2);
-    return ids.concat(weak, past).map(function (id) { return ITEMS[id]; });
+    var pool = ids.concat(weak, past);
+    return pool.concat(civicsPick(nReal, pool)).map(function (id) { return ITEMS[id]; });
   }
 
   /* ---------- bells ---------- */
@@ -653,8 +730,19 @@
       CIPLE.oralPrompts.map(function (p) { return "<li>" + esc(p) + "</li>"; }).join("") + "</ul>";
 
     h += "<h2>O teste cívico <span class='preof'>PRÉ-OFICIAL</span></h2>" +
-      '<div class="decode"><strong>Honest label:</strong> ' + esc(CIVICS.status) + "</div>" +
-      "<p>" + CIVICS.questions.length + " seed questions across the announced areas — history, institutions, rights and duties, culture. Each question is in Portuguese (exam-realistic) with English under it.</p>" +
+      '<div class="decode"><strong>Honest label:</strong> ' + esc(CIVICS.status) + "</div>";
+
+    h += "<h2>As leituras cívicas</h2>" +
+      "<p>The civics syllabus, taught as Portuguese: one short reading per week, written at your level. Its drills join O Treino and A Prova automatically (capped at 2 per session — the language always comes first). One unlocks each week; read ahead freely.</p>" +
+      '<div class="steps">' +
+      (window.CIVICS_READINGS || []).map(function (r) {
+        var open = r.week * 7 <= currentDay();
+        return '<a class="step' + (open ? "" : " locked") + '" href="#/leitura/' + r.id + '"><span class="n">' + r.week +
+          "</span><div><strong>" + esc(r.title) + "</strong><br><small>" + esc(r.titleEn) +
+          (open ? "" : " — unlocks day " + r.week * 7) + "</small></div></a>";
+      }).join("") + "</div>";
+
+    h += "<p>Quick quiz across the whole pool, any time:</p>" +
       '<p><a class="btn" href="#/civico">Take the civics drill →</a></p>';
     h += "</section>";
     render(el(h));
@@ -808,6 +896,8 @@
     if (h.indexOf("#/praticar/") === 0) return viewPraticar(h);
     if (h.indexOf("#/bell/") === 0) return viewBell(h);
     if (h.indexOf("#/cidadania") === 0) return viewCidadania();
+    if (h.indexOf("#/leitura/") === 0) return viewLeitura(h);
+    if (h.indexOf("#/praticar-leitura/") === 0) return viewPraticarLeitura(h);
     if (h.indexOf("#/civico") === 0) return viewCivico();
     if (h.indexOf("#/definicoes") === 0) return viewDefinicoes();
     return viewHome();
